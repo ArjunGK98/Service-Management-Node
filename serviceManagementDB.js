@@ -1,6 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const app = express();
+const bcrypt = require('bcrypt');
 
 app.use(bodyParser.urlencoded({extended : true}));
 app.use(bodyParser.json());
@@ -97,13 +98,17 @@ app.get("/user/:id",function(req,res){
 });
 app.post("/user/save",function(req,res){
      console.log("post user details");
-     var userMod = new userModel(req.body);
-     userMod.save(function(err,data){
-          if(err){
-               res.send("err "+err);
-          } else {
-               res.send(data);
-          }
+     bcrypt.hash(req.body.userPassword,12,function(err,hash){
+          req.body.userPassword =hash;
+          var userMod = new userModel(req.body);
+          userMod.save(function(err,data){
+               if(err){
+                    res.send("err "+err);
+               } else {
+                    res.send(data);
+               }
+     });
+     
      });
 });
 app.put("/user/update",function(req,res){
@@ -126,8 +131,30 @@ app.delete("/user/delete",function(req,res){
           }
      });
 });
+//login api for user
+app.post("/user/login",function(req,res){
+     console.log("user login api");
+     userModel.find({
+          userName:req.body.userName
+},function(err,user){
+     var pass = user[0].userPassword;//JSON.stringify(user.map(a =>a.userPassword));
+     //console.log("pass" +pass);
+     if(err){
+          console.log("user name err");
+         
+     } else {
+          bcrypt.compare(req.body.userPassword,pass).then(function(){
+               //res.redirect("/userhome");
+               res.send("match");
+          }).catch(function(){
+               //res.redirect("/");
+               res.send("not match");
+          })
+     }
 
+})
 
+});
 //rest apis for vendorDetails
 app.get("/vendor",function(req,res){
      console.log("get all vendor details");
@@ -152,14 +179,17 @@ app.get("/vendor/:id",function(req,res){
 });
 app.post("/vendor/save",function(req,res){
      console.log("post vendor details");
-     var venderMod = new vendorModel(req.body);
-     venderMod.save(function(err,data){
-          if(err){
-               res.send("err "+err);
-          } else {
-               res.send(data);
-          }
-     });
+     bcrypt.hash(req.body.vendorPassword,12,function(err,hash){
+          req.body.vendorPassword = hash;
+          var venderMod = new vendorModel(req.body);
+          venderMod.save(function(err,data){
+               if(err){
+                    res.send("err "+err);
+               } else {
+                    res.send(data);
+               }
+          });
+     })
 });
 app.put("/vendor/update",function(req,res){
      console.log("put vendor details");
@@ -181,7 +211,24 @@ app.delete("/vendor/delete",function(req,res){
           }
      });
 });
-
+//login api for vendor
+app.post("/vendor/login",function(req,res){
+     console.log("vendor login api");
+     vendorModel.find({vendorName:req.body.vendorName},function(err,vendor){
+          var pass =vendor[0].vendorPassword;
+          if(err){
+               console.log("vendor err "+err);
+          } else {
+               bcrypt.compare(req.body.vendorPassword,pass).then(function(){
+                    res.redirect("/vendorhomepage");
+                    res.send("match");
+               }).catch(function(){
+                    res.redirect("/");
+                    res.send("not match");
+               });
+          }
+     });
+});
 
 //rest apis for ownerDetails
 app.get("/owner",function(req,res){
@@ -206,13 +253,16 @@ app.get("/owner/:id",function(req,res){
 });
 app.post("/owner/save",function(req,res){
      console.log("post owner details");
-     var ownerMod = new ownerModel(req.body);
-     ownerMod.save(function(err,data){
-          if(err){
-               res.send("err "+err);
-          } else {
-               res.send(data);
-          }
+     bcrypt.hash(req.body.ownerPassword,12,function(err,hash){
+          req.body.ownerPassword = hash;
+          var ownerMod = new ownerModel(req.body);
+          ownerMod.save(function(err,data){
+               if(err){
+                    res.send("err "+err);
+               } else {
+                    res.send(data);
+               }
+          });
      });
 });
 app.put("/owner/update",function(req,res){
@@ -236,6 +286,24 @@ app.delete("/owner",function(req,res){
      })
 });
 
+//login api for owner
+app.post("/owner/login",function(req,res){
+     console.log("login for owner");
+     ownerModel.find({ownerName:req.body.ownerName},function(err,owner){
+          var pass = owner[0].ownerPassword;
+          if(err){
+               console.log("err "+err);
+          } else {
+               bcrypt.compare(req.body.ownerPassword,pass).then(function(){
+                    //res.redirect("/ownerHomePage");
+                    res.send("match");
+               }).catch(function(){
+                    //res.redirect("/");
+                    res.send("not match");
+               })
+          }
+     })
+})
 //join two collections
 
 //we use 8000 port for this restapi
