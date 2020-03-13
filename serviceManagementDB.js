@@ -1,7 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const bcrypt = require('bcrypt');
-
+const crypto = require('crypto');
 var path = require('path');
 const logger = require('morgan');
 
@@ -16,6 +16,11 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended : true}));
 
+
+
+
+
+
 var mongo = require("mongoose");
 var mongoURL = "mongodb://localhost:27017/serviceManagement";
 
@@ -27,9 +32,11 @@ mongo.connect(mongoURL,function(err){
 
 var Schema = mongo.Schema;
 var userSchema = new Schema({
-     userId :{
-          type : Number
-     },
+     userId : {
+          type: String,
+          required: true,
+          unique: true
+      },
      //Salman
      //TODO: unique name
      // userName :{
@@ -42,9 +49,14 @@ var userSchema = new Schema({
           type : String
      }
 });
+userSchema.index({
+     userId :1
+},{
+     unique:true
+})
 var vendorSchema = new Schema({
      vendorId :{
-          type : Number
+          type : String
      },
      vendorName :{
           type : String
@@ -96,12 +108,82 @@ var issueSchema = new Schema({
           type : Date
      }
 });
+var blockchainSchema = new Schema();
 
 var userModel = mongo.model('user',userSchema,"userDetails");
 var vendorModel = mongo.model('vendor',vendorSchema,"vendorDetails");
 var ownerModel = mongo.model('owner',ownerSchema,'ownerDetails');
 var issueModel  = mongo.model('issue',issueSchema,'issueDetails');
+var blockModel = mongo.model('block',blockchainSchema,'blockCHDB');
 
+//TODO : Blockchin
+class Block {
+     constructor(index, data, prevHash) {
+          this.index = index;
+          this.timestamp = Math.floor(Date.now() / 1000);
+          this.data = data;
+          this.prevHash = prevHash;
+          this.hash=this.getHash();
+     }
+  
+     getHash() {
+         var encript=JSON.stringify(this.data) + this.prevHash + this.index + this.timestamp;
+         var hash=crypto.createHmac('sha256', "secret")
+         .update(encript)
+         .digest('hex');
+         // return sha(JSON.stringify(this.data) + this.prevHash + this.index + this.timestamp);
+         return hash;
+     }
+  }
+  
+  
+  class BlockChain {
+     constructor() {
+         this.chain = [];
+     }
+  
+     addBlock(data) {
+         let index = this.chain.length;
+         let prevHash = this.chain.length !== 0 ? this.chain[this.chain.length - 1].hash : 0;
+         let block = new Block(index, data, prevHash);
+         this.chain.push(block);
+         let mod = new blockModel(block);
+         mod.save(function(err,data){
+              if(err){
+                   console.log("err in block chain save"+err);
+              } else {
+                   console.log(data);
+              }
+         });
+         console.log("index "+this.chain.length);
+         console.log("kjdfljfdg "+JSON.stringify(this.chain[index]));
+     }
+  
+     chainIsValid(){
+             for(var i=0;i<this.chain.length;i++){
+                 if(this.chain[i].hash !== this.chain[i].getHash())
+                     return false;
+                 if(i > 0 && this.chain[i].prevHash !== this.chain[i-1].hash)
+                     return false;
+             }
+             return true;
+         }
+  }
+  
+  
+  const BChain = new BlockChain();
+//   BChain.addBlock({sender: "Bruce wayne", reciver: "Tony stark", amount: 100});
+//   BChain.addBlock({sender: "Harrison wells", reciver: "Han solo", amount: 50});
+//   BChain.addBlock({sender: "Tony stark", reciver: "Ned stark", amount: 75});
+
+
+  console.dir(BChain,{depth:null})
+  
+  console.log("******** Validity of this blockchain: ", BChain.chainIsValid());
+
+
+
+//Last
 function generateUUID() {
      //randomValue = randomValue +10;
      return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, function (value) {
@@ -135,18 +217,29 @@ app.get("/user/:id",function(req,res){
 });
 app.post("/user/save",function(req,res){
      console.log("post user details");
-     bcrypt.hash(req.body.userPassword,12,function(err,hash){
-          req.body.userPassword =hash;
-          var userMod = new userModel(req.body);
-          userMod.save(function(err,data){
-               if(err){
-                    res.send("err "+err);
-               } else {
-                    res.send(data);
-               }
-     });
-     
-     });
+     userModel.findOne({ userId: req.body.userId }, function (err, data) {
+          if(err){
+               console.log("err "+err);
+          }
+          if (data){
+               res.send("user already register ");
+          } else {
+
+               bcrypt.hash(req.body.userPassword,12,function(err,hash){
+                    req.body.userPassword =hash;
+                    var userMod = new userModel(req.body);
+                    userMod.save(function(err,data){
+                         if(err){
+                              res.send("err "+err);
+                         } else {
+                              res.send(data);
+                         }
+                    });
+                    
+               });
+               
+          }
+})
 });
 app.put("/user/update",function(req,res){
      console.log("put user details");
@@ -348,7 +441,7 @@ app.post("/issue/save",function(req,res){
      var randomValue = generateUUID();
      var issueMod = new issueModel({
           trackId : randomValue,
-          aUserName : req.body.aUserName,//userId,hardcodeid
+          aUserName : "sfdsf",//req.body.aUserName,//userId,hardcodeid
           type :"strubf", 
           issue : req.body.issue,//tilte
           description : req.body.description,
@@ -362,6 +455,7 @@ app.post("/issue/save",function(req,res){
                res.send("err "+err);
           } else {
                res.send(data);
+               BChain.addBlock(data);
           }
      });
 });
@@ -380,6 +474,15 @@ app.put("/issue/VNupdate",function(req,res){
           res.send("vendor is already assinged by the owner :P"); 
      }
 });
+app.get("/issue",function(req,res){
+     issueModel.find({},function(err,data){
+          if(err){
+               res.json(err);
+          } else {
+               res.json(data);
+          }
+     })
+})
 app.get("/issue/as/:st",function(req,res){
      console.log("list of issur");
      issueModel.find({status:req.params.st},function(err ,data){//condition only user id
