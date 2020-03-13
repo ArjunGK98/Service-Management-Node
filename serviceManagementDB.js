@@ -181,6 +181,13 @@ class Block {
         "flag": false,
         "status": true,
         "createdDate": "2020-03-13T10:30:52.383Z"});
+
+BChain.addBlock({"_id":"5e6b60dc30ae6527c84eac68",trackId: "18acfdc5-b2dc-4aee-2c894-dabd28df36B0",
+   issue: "SW","description": "check",
+        "assignedVendorName": "Malli",
+        "flag": false,
+        "status": true,
+        "createdDate": "2020-03-13T10:30:52.383Z"});
 //   BChain.addBlock({sender: "Harrison wells", reciver: "Han solo", amount: 50});
 //   BChain.addBlock({sender: "Tony stark", reciver: "Ned stark", amount: 75});
 
@@ -520,18 +527,23 @@ app.get("/issue/getAll",function(req,res){
 });
 app.get("/issue/blockData",function(req,res){
      console.log("blocks of data by tracking Id");
-     var tempList = {},
+     var tempList = [],
      tempArray = [],
      itemCount =0;
 
      tempArray = BChain.getBlockData();
      tempArray.forEach((element,index) => {
           if(element.data.trackId === req.body.trackId){
-               tempList[index] = element;
-               itemCount++;
+               var tempObj = {};
+               tempObj.data =element.data;
+               tempObj.prevHash = element.prevHash;
+               tempObj.hash = element.hash;
+               tempList.push(tempObj);
+          //     tempList[index] = element;
+           //    itemCount++;
           }
      });
-     if(itemCount){
+     if(tempList.length){
           res.send(tempList);
      }else {
           res.send("no items found");
