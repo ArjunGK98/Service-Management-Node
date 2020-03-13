@@ -1,10 +1,20 @@
 const express = require("express");
 const bodyParser = require("body-parser");
-const app = express();
 const bcrypt = require('bcrypt');
 
-app.use(bodyParser.urlencoded({extended : true}));
+var path = require('path');
+const logger = require('morgan');
+
+// const fileUpload = require('express-fileupload');
+const cors = require('cors');
+// const JSON = require('circular-json'); 
+
+const app = express();
+
+app.use(logger('dev'));
+app.use(cors());
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({extended : true}));
 
 var mongo = require("mongoose");
 var mongoURL = "mongodb://localhost:27017/serviceManagement";
@@ -20,23 +30,16 @@ var userSchema = new Schema({
      userId :{
           type : Number
      },
-     userName :{
-          type : String
-     },
+     //Salman
+     //TODO: unique name
+     // userName :{
+     //      type : String
+     // },
      userPassword :{
           type : String
      },
      userEmail :{
           type : String
-     },
-     issue :{
-          type : String
-     },
-     description :{
-          type : String
-     },
-     createdDate :{
-          type : Date
      }
 });
 var vendorSchema = new Schema({
@@ -66,12 +69,46 @@ var ownerSchema = new Schema({
      ownerEmail :{
           type : String
      },
-})
+});
+var issueSchema = new Schema({
+     trackId: {
+          type : String
+     },
+     userName:{
+          type: String
+     },
+     issue :{
+          type : String
+     },
+     description :{
+          type : String
+     },
+     assignedVendorName :{
+          type : String
+     },
+     flag :{
+          type : Boolean
+     },
+     status :{
+          type : Boolean
+     },
+     createdDate :{
+          type : Date
+     }
+});
 
 var userModel = mongo.model('user',userSchema,"userDetails");
 var vendorModel = mongo.model('vendor',vendorSchema,"vendorDetails");
 var ownerModel = mongo.model('owner',ownerSchema,'ownerDetails');
+var issueModel  = mongo.model('issue',issueSchema,'issueDetails');
 
+function generateUUID() {
+     //randomValue = randomValue +10;
+     return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, function (value) {
+          randomValue = (1 + Math.random()) * 0x10000;
+          return (((value | randomValue)& (15<< value / 4))).toString(16);
+     });
+}
 //rest apis for usersDetails
 app.get("/user",function(req,res){
      console.log("get all user details");
@@ -153,6 +190,7 @@ app.post("/user/login",function(req,res){
      }
 
 })
+//owner after assign
 
 });
 //rest apis for vendorDetails
@@ -285,7 +323,6 @@ app.delete("/owner",function(req,res){
           }
      })
 });
-
 //login api for owner
 app.post("/owner/login",function(req,res){
      console.log("login for owner");
@@ -303,10 +340,72 @@ app.post("/owner/login",function(req,res){
                })
           }
      })
-})
-//join two collections
+});
 
+//rest aips for issueDetails
+app.post("/issue/save",function(req,res){
+     console.log("issue save");
+     var randomValue = generateUUID();
+     var issueMod = new issueModel({
+          trackId : randomValue,
+          aUserName : req.body.aUserName,//userId,hardcodeid
+          type :"strubf", 
+          issue : req.body.issue,//tilte
+          description : req.body.description,
+          assignedVendorName :"Not yet assigned",
+          flag : false,
+          status :true,
+          createdDate : new Date()
+     }); 
+     issueMod.save(function(err,data){
+          if(err){
+               res.send("err "+err);
+          } else {
+               res.send(data);
+          }
+     });
+});
+app.put("/issue/VNupdate",function(req,res){
+     console.log("vendor assign by the owner");
+     if(req.body.flag==false) {
+          issueModel.updateOne({flag:req.body.flag},{assignedVendorName:req.body.assignedVendorName},function(err,data){
+               flag = true;
+               if(err){
+                    res.send("err "+err);
+               } else {
+                    res.send(data);
+               }
+          });
+     } else {
+          res.send("vendor is already assinged by the owner :P"); 
+     }
+});
+app.get("/issue/as/:st",function(req,res){
+     console.log("list of issur");
+     issueModel.find({status:req.params.st},function(err ,data){//condition only user id
+          if(err){
+               res.send(err);
+          } else {
+
+ //res.json({ file: "myfile" }); 
+ 
+
+              res.json(data);
+             //res.json({"trackId": data[0].trackId, "issue": data[0].issue})
+          }
+     });
+});
+app.get("/issue/:tid",function(req,res){
+     console.log("find issue by id");
+     issueModel.findOne({trackId:req.params.tid},function(err,data){
+          if(err) {
+               res.send("err "+err);
+          } else {
+               res.send(data);
+          }
+     });
+});
 //we use 8000 port for this restapi
 app.listen(8000,function(){
      console.log("serviceManagement listnig on 8000");
-})
+});
