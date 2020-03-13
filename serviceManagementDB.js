@@ -108,13 +108,13 @@ var issueSchema = new Schema({
           type : Date
      }
 });
-var blockchainSchema = new Schema();
+//var blockchainSchema = new Schema();
 
 var userModel = mongo.model('user',userSchema,"userDetails");
 var vendorModel = mongo.model('vendor',vendorSchema,"vendorDetails");
 var ownerModel = mongo.model('owner',ownerSchema,'ownerDetails');
 var issueModel  = mongo.model('issue',issueSchema,'issueDetails');
-var blockModel = mongo.model('block',blockchainSchema,'blockCHDB');
+//var blockModel = mongo.model('block',blockchainSchema,'blockCHDB');
 
 //TODO : Blockchin
 class Block {
@@ -147,15 +147,15 @@ class Block {
          let prevHash = this.chain.length !== 0 ? this.chain[this.chain.length - 1].hash : 0;
          let block = new Block(index, data, prevHash);
          this.chain.push(block);
-         let mod = new blockModel(block);
-         mod.save(function(err,data){
-              if(err){
-                   console.log("err in block chain save"+err);
-              } else {
-                   console.log(data);
-              }
-         });
-         console.log("index "+this.chain.length);
+     //     let mod = new blockModel(block);
+     //     mod.save(function(err,data){
+     //          if(err){
+     //               console.log("err in block chain save"+err);
+     //          } else {
+     //               console.log(data);
+     //          }
+     //     });
+          console.log("index "+this.chain.length);
          console.log("kjdfljfdg "+JSON.stringify(this.chain[index]));
      }
   
@@ -168,11 +168,19 @@ class Block {
              }
              return true;
          }
+     getBlockData(){
+          return this.chain;
+     }    
   }
   
   
   const BChain = new BlockChain();
-//   BChain.addBlock({sender: "Bruce wayne", reciver: "Tony stark", amount: 100});
+   BChain.addBlock({"_id":"5e6b60dc30ae6527c84eac69",trackId: "18acfdc5-b2dc-4aee-2c894-dabd28df36c0",
+   issue: "SW","description": "check",
+        "assignedVendorName": "salman",
+        "flag": false,
+        "status": true,
+        "createdDate": "2020-03-13T10:30:52.383Z"});
 //   BChain.addBlock({sender: "Harrison wells", reciver: "Han solo", amount: 50});
 //   BChain.addBlock({sender: "Tony stark", reciver: "Ned stark", amount: 75});
 
@@ -468,6 +476,8 @@ app.put("/issue/VNupdate",function(req,res){
                     res.send("err "+err);
                } else {
                     res.send(data);
+                    BChain.addBlock(data);
+
                }
           });
      } else {
@@ -498,9 +508,9 @@ app.get("/issue/as/:st",function(req,res){
           }
      });
 });
-app.get("/issue/:tid",function(req,res){
+app.get("/issue/getAll",function(req,res){
      console.log("find issue by id");
-     issueModel.findOne({trackId:req.params.tid},function(err,data){
+     issueModel.findOne({trackId:req.body.trackId},function(err,data){
           if(err) {
                res.send("err "+err);
           } else {
@@ -508,7 +518,27 @@ app.get("/issue/:tid",function(req,res){
           }
      });
 });
+app.get("/issue/blockData",function(req,res){
+     console.log("blocks of data by tracking Id");
+     var tempList = {},
+     tempArray = [],
+     itemCount =0;
+
+     tempArray = BChain.getBlockData();
+     tempArray.forEach((element,index) => {
+          if(element.data.trackId === req.body.trackId){
+               tempList[index] = element;
+               itemCount++;
+          }
+     });
+     if(itemCount){
+          res.send(tempList);
+     }else {
+          res.send("no items found");
+     }
+});
+
 //we use 8000 port for this restapi
-app.listen(8000,function(){
-     console.log("serviceManagement listnig on 8000");
+app.listen(8008,function(){
+     console.log("serviceManagement listnig on 8008");
 });

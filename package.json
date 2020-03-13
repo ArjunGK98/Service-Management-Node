@@ -1,0 +1,29 @@
+{
+  "name": "Service-Management-Node",
+  "version": "1.0.0",
+  "description": "Node application for service management tool",
+  "main": "dbOperation.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ArjunGK98/Service-Management-Node.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ArjunGK98/Service-Management-Node/issues"
+  },
+  "homepage": "https://github.com/ArjunGK98/Service-Management-Node#readme",
+  "dependencies": {
+    "bcrypt": "^4.0.1",
+    "body-parser": "^1.19.0",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "mongodb": "^3.5.5",
+    "mongoose": "^5.9.3",
+    "morgan": "^1.9.1"
+  }
+}
